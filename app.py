@@ -127,13 +127,6 @@ def traiter():
     options = list(options[indices])
     output = analyse.get("output","")
 
-    # if len(indices)==1:              # Cas 1 seule règle applicable, on boucle directement
-    #     session["unique_choice"] = indices[0]
-    #     return render_template("Application.html",
-    #                             scenario=scenario,
-    #                             resultat=resultat,
-    #                             loop = True,
-    #                             log=log)
     if len(indices)==0 or choice=="-1":              # Plus aucune règle applicable, on s'arrête de générer l'extension
         if len(deja_appliquees) == 0:               # Si on a appliqué aucune règle on renvoie une erreur
             return render_template("Application.html",
@@ -213,6 +206,26 @@ def exception():
         selection=list(SELECTION_METHODS.keys()),
         dist_map=DISTANCE_METHODS,
         sel_map=SELECTION_METHODS,
+        log=log)
+
+@app.route("/proposition", methods=["POST"])
+def proposition():
+
+    scenario = request.form.get('scenario', "").strip()
+    log = request.form.get("log", "")
+
+    regle_exception = request.form.get("choix_regle_exception", "")
+
+    resultat = request.form.get("resultat", "")
+    S = resultat.split(";")
+    Rb = init_rule_base2()
+    Rb.init_S(S)
+
+    return render_template(
+        "Application.html",
+        regle_exception = regle_exception,
+        resultat=resultat,
+        scenario = scenario,
         log=log)
 
 if __name__ == "__main__":

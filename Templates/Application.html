@@ -54,7 +54,6 @@
         {% if log %}
             <h2>Génération d'une extension: </h2>
             <p>Voici le déroulé de l'analyse du scénario par le système. Vous pouvez retrouver les différentes étapes de sélection des règles applicables</p>
-            <p>Certaines règles sont des exceptions d'autres règles, si une règle et son exception sont applicables dans une situation on va sélectionner par défaut l'exception</p>
             <pre>{{ log }}</pre>
         {% endif %}
 
@@ -175,10 +174,14 @@
         {% elif indices_rules is defined %}
             <h3>Voici les règles à partir desquelles nous proposons de créer une exception:</h3>
 
-            <form method="post">
+            <form method="post" action="/proposition">
+                <input type="hidden" name="scenario" value="{{ scenario }}">
+                <input type="hidden" name="resultat" value="{{ resultat }}">
+                <textarea name="log" style="display:none;">{{ log }}</textarea>
+
                 {% for rule in options_rules %}
                     <div style="margin-bottom: 1em; padding: 1em; border: 1px solid #ccc; border-radius: 8px;">
-                        <input type="radio" id="regle_{{ loop.index0 }}" name="user_choice"
+                        <input type="radio" id="regle_{{ loop.index0 }}" name="choix_regle_exception"
                             value="{{ options_rules[loop.index0] }}" {% if loop.first %}checked{% endif %} required>
                         <label for="regle_{{ loop.index0 }}"><strong>{{ rule }}</strong></label>
 
@@ -196,14 +199,17 @@
                 {% endfor %}
 
                 <div style="margin-top: 1em;">
-                    <input type="radio" id="regle_none" name="user_choice" value="-1" required>
+                    <input type="radio" id="regle_none" name="choix_regle_exception" value="-1" required>
                     <label for="regle_none"><strong>Ne pas sélectionner de règle</strong></label>
                 </div>
 
                 <input type="submit" value="Valider le choix" style="margin-top: 1em;">
             </form>
+        {% endif %}
 
-
+        {% if regle_exception %}
+            <h2>Règle choisie: </h2>
+            <pre>{{ regle_exception }}</pre>
         {% endif %}
 
         </main>
