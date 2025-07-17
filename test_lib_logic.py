@@ -24,7 +24,7 @@ class TestFcts(unittest.TestCase):
         self.assertIsInstance(vars[1].children[0],Variable)
         self.assertIsInstance(vars[0],Variable)
     
-    def test_Negation_Elimination(self):
+    def test_negation_equivalence(self):
         variables = list_to_vars(self.Var_dict,["~a","~d"])
         W_vars = list_to_vars(self.Var_dict,["a","~b","~c","d"])
         comparaison = list_to_vars(self.Var_dict,["b","c"])
@@ -33,11 +33,11 @@ class TestFcts(unittest.TestCase):
         f2= W_vars[2].iff(W_vars[3])
 
         W = [f1,f2]
-        temp = Negation_Elimination(variables,W)
+        temp = negation_equivalence(variables,W)
         self.assertIs(temp[0],comparaison[0])
         self.assertIs(temp[1],comparaison[1])
     
-    def test_all_premises(self):
+    def test_ensemble_premices_equi(self):
         variables = list_to_vars(self.Var_dict,["b","~c"])
         W_vars = list_to_vars(self.Var_dict,["a","~b","~c","d"])
         comparaison = list_to_vars(self.Var_dict,["b","~c","~a","d"])
@@ -46,7 +46,7 @@ class TestFcts(unittest.TestCase):
         f2= W_vars[2].iff(W_vars[3])
 
         W = [f1,f2]
-        temp = all_premises(variables,W)
+        temp = ensemble_premices_equi(variables,W)
         self.assertIs(temp[0],comparaison[0])
         self.assertIsInstance(temp[1],Not)
         self.assertIs(temp[1].children[0],comparaison[1].children[0])
@@ -54,10 +54,10 @@ class TestFcts(unittest.TestCase):
         self.assertIs(temp[2].children[0],comparaison[2].children[0])
         self.assertIs(temp[3],comparaison[3])
 
-    def test_is_subset_equivalent(self):
+    def test_is_a_in_b(self):
         v1 = list_to_vars(self.Var_dict,["~a","~d"])
         v2 = list_to_vars(self.Var_dict,["~a","~d","c"])
-        self.assertEqual(True,is_subset_equivalent(v1, v2))
+        self.assertEqual(True,is_a_in_b(v1, v2))
 
     def test_get_var_from_index(self):
         var_objs = list_to_vars(self.Var_dict, ["a","b","c"])
