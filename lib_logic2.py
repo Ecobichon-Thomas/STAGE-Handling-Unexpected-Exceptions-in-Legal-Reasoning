@@ -259,11 +259,11 @@ class Rule_Base:
             self.C.append(C)
             self.compteur += 1
 
-    def remove_rules(self,l):
-        self.rules = [v for i, v in enumerate(self.rules) if i not in l]
-        self.C  = [v for i, v in enumerate(self.C) if i not in l]
-        self.P  = [v for i, v in enumerate(self.P) if i not in l]
-        self.compteur = self.compteur-1
+    #def remove_rules(self,l):              # Pas à jour et inutilisé
+    #    self.rules = [v for i, v in enumerate(self.rules) if i not in l]
+    #    self.C  = [v for i, v in enumerate(self.C) if i not in l]
+    #    self.P  = [v for i, v in enumerate(self.P) if i not in l]
+    #    self.compteur = self.compteur-1
     
     def inclusion(self, indices):                # TEST OK
         if len(indices) == 0:           # Convention: si le vecteur est vide c'est qu'on veut comparer avec toute les règles
@@ -302,12 +302,22 @@ class Rule_Base:
     
     def dist_hamming(self, indice):                # TEST OK
         P1 = np.atleast_2d(self.P[indice])[0]             # indice est l'indice de la règle qu'on va comparer aux autres
-        C1 = self.C[indice][0]
+        C1 = self.C[indice]
+        C1_full = ensemble_premices_equi (C1, self.W)
+        c1_str = ' & '.join(str(p) for p in C1_full)
 
         C = self.C
         P = np.array(self.P)
-
-        same_concl = np.array([c[0].is_equivalent(C1) for c in C])             # On regarde les lignes avec des conclusions identiques
+        same_concl = []
+        for c in C:
+            c_full = ensemble_premices_equi (c, self.W)
+            print(' & '.join(str(p) for p in c_full)+" <=> "+c1_str)
+            str_formula = (' & '.join(str(p) for p in c_full)+" <=> "+c1_str)
+            eq_c = str_to_formula(str_formula, self)
+            if eq_c.is_tautology():
+                same_concl.append(True)              # On regarde les lignes avec des conclusions identiques
+            else:
+                same_concl.append(False)
 
         n = len(self.Var_dictionnary._variables)
         dists = np.full(len(C), n + 1)             # On fixe la distance par défault à delta, si les conclusions des 2 régles sont les mêmes on modifira cette distance
@@ -449,13 +459,11 @@ def exceptions(Rb, selected_indices):
             if j == i:
                 continue
             if is_a_in_b(r1.premises, r2.premises):             # Si on a des prémices incluses dans r2 on étudie la compatibilité des ccl
-                c1 = r1.conclusion[0]
-                c2 = r2.conclusion[0]
-                if not Not(c1).is_equivalent(c2):               # Si elles sont incompatibales on sélectionne la règle
+                conclusions1 = r1.conclusion
+                conclusions2 = r2.conclusion
+                if check_conflict(conclusions1, conclusions2):               # Si elles sont incompatibles on sélectionne la règle
                     filtre.append(i)
                     liste_exceptions.append(j)
-                elif c1.is_equivalent(c2):              # Sinon on sort
-                    continue
                 else:
                     if not Rb.compatible([r1,r2]):              # Si elles sont incompatibales on sélectionne la règle
                         filtre.append(i)
@@ -478,9 +486,9 @@ def init_rule_base2():
          ["véhicule", "traverse_feu_rouge"],
          ["véhicule", "etat_urgence", "traverse_feu_rouge"],
          ["véhicule", "traverse_parc"],
-         ["véhicule", "gyrophare_allume"],
+         ["véhicule", "etat_urgence"],
          ["véhicule", "etat_urgence", "autorisé"]],
-        [["interdit"], ["autorisé"],["interdit"], ["autorisé"], ["interdit"], ["etat_urgence"],["~amende"]]
+        [["interdit"], ["autorisé"],["interdit"], ["autorisé"], ["interdit"], ["gyrophare_allume"],["~amende","test"]]
     )
     return Rb
 
@@ -563,7 +571,6 @@ def formula_creator(tokens, token_to_var):                  # va créer une form
             neg = False
 
         i += 1
-
     if neg:
         raise ValueError("Dangling '~' with no variable")
     if len(stack) != 1:

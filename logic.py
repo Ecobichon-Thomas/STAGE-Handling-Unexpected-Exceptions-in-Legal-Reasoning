@@ -181,7 +181,7 @@ class Not(Proposition):
 	def __init__(self,child):
 		Proposition.__init__(self,child)
 	def __str__(self):
-		return u'¬{0}'.format(self.children[0].child_str()) 
+		return u'~ {0}'.format(self.children[0].child_str()) 
 	def evaluate(self, **assignments):
 		return not self.children[0].evaluate(**assignments)
 #
