@@ -272,32 +272,41 @@ class Rule_Base:
             return [i for i in indices if is_a_in_b(self.rules[i].premises, self.S)]
         
     def compatibility_matrix(self,indices):                # TEST OK
+        print("indices",indices)
         n = len(indices)             # indices est un vecteur des indices de toutes les règles dont on veut comparer la compatibilité
         compatibility_matrix = np.zeros((n,n))
+        print("compatibility_matrix",compatibility_matrix)
 
         for a in range(n):
             for b in range(a+1, n):
+                print("a",a)
+                print("b",b)
                 i = indices[a]
                 j = indices[b]
+                print("i",i)
+                print("j",j)
 
                 r1 = self.rules[i]
+                print("r1",r1)
                 r2 = self.rules[j]
+                print("r2",r2)
 
                 conclusions1 = r1.conclusion              # Attention, pour l'instant les conclusions sont des listes de longueur 1, il faudra changer la suite après
                 conclusions2 = r2.conclusion
 
                 if is_a_in_b(r1.premises, r2.premises):              # On teste si il y a inclusion des premises d'une règle dans l'autre
                     if check_conflict(conclusions1, conclusions2):
-                        compatibility_matrix[i, j] = 1
+                        compatibility_matrix[a, b] = 1
                     else:
                         if not self.compatible([r1,r2]):
-                            compatibility_matrix[i, j] = 1
+                            compatibility_matrix[a, b] = 1
                 elif is_a_in_b(r2.premises, r1.premises):               # Si c'est inclus dans l'autre sens on remplit le bas de la matrice,
                     if check_conflict(conclusions1, conclusions2):
-                        compatibility_matrix[j, i] = 1
+                        compatibility_matrix[b, a] = 1
                     else:
                         if not self.compatible([r1,r2]):
-                            compatibility_matrix[j, i] = 1
+                            compatibility_matrix[b, a] = 1
+        print("compatibility_matrix",compatibility_matrix)
         return compatibility_matrix
     
     def dist_hamming(self, indice):                # TEST OK
@@ -407,9 +416,11 @@ def scenario_check_web4_test(S, rulebase,deja_appliquees):
     regles_possibles = temp
 
     if len(regles_possibles) > 1:
+        output.append("\n")
         output.append("Plusieurs règles correspondent à la situation:")
         for i in regles_possibles:
             output.append(f"- Règle {i} : {rulebase.rules[i]}")
+        #output.append("\n")
 
         C_matrix = rulebase.compatibility_matrix(regles_possibles)
         rows_to_remove = set(np.where(C_matrix == 1)[0])
@@ -419,7 +430,7 @@ def scenario_check_web4_test(S, rulebase,deja_appliquees):
                 if C_matrix[i, j] == 1:
                     r1_index = regles_possibles[i]
                     r2_index = regles_possibles[j]
-                    output.append(f"La règle {r2_index} est prioritaire sur la règle {r1_index}, on écarte la règle {r1_index}. \n")
+                    output.append(f"La règle {r2_index} est prioritaire sur la règle {r1_index}, on écarte la règle {r1_index}")
 
         regles_possibles = [r for i, r in enumerate(regles_possibles) if i not in rows_to_remove]
 
@@ -436,7 +447,6 @@ def scenario_check_web4_test(S, rulebase,deja_appliquees):
 
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
-
 
 def choix_exception(distance_method, rulebase, selection_fct_and_args,regle_choisie):
     selection_fct = selection_fct_and_args[0]
@@ -488,25 +498,7 @@ def init_rule_base2():
          ["véhicule", "traverse_parc"],
          ["véhicule", "etat_urgence"],
          ["véhicule", "etat_urgence", "autorisé"]],
-        [["interdit"], ["autorisé"],["interdit"], ["autorisé"], ["interdit"], ["gyrophare_allume"],["~amende","test"]]
-    )
-    return Rb
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
-
-def init_rule_base3():
-    Rb = Rule_Base()
-    Rb.add_W([
-        "interdit <=> ~ autorisé",
-        "~ ( moins_30 & entre30_50 ) & ~ ( moins_30 & plus_50 ) & ~ ( entre30_50 & plus_50 )"
-    ])
-    Rb.add_rules(
-        [["véhicule", "traverse_feu_rouge"],
-         ["véhicule", "etat_urgence", "traverse_feu_rouge"],
-         ["véhicule", "traverse_parc"],
-         ["véhicule", "etat_urgence"],
-         ["véhicule", "etat_urgence", "autorisé"]],
-        [["interdit"], ["autorisé"], ["interdit"], ["gyrophare"],["~amende","test"]]
+        [["interdit"], ["autorisé"],["interdit"], ["autorisé"], ["interdit"], ["gyrophare_allume"],["~amende"]]
     )
     return Rb
 

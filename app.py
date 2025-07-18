@@ -67,7 +67,7 @@ def traiter():
         +premises
         +"\n Ne crée de nouveau prémice que si c'est nécessaire."
         +"\n Ne rajoute des prémices que lorsque tu as de l'information explicite, ne fait pas d'inférence. "
-        +"Par exemple une ambulance n'est pas forcément en état d'urgence, c'est le cas uniquement si c'est précisé, généralise cet exemple à tout les prémices"
+        +"\n Par exemple une ambulance n'est pas forcément en état d'urgence et n'a PAS FORCEMENT son gyrophare allumé! C'est le cas uniquement si c'est PRECISE, généralise cet exemple à tout les prémices"
         +"\n Ton retour ne doit comporter que la liste des prémices correspondant au scénario dans le format demandé"
         +"\n Si certains prémices sont des négations, utilise la caractère ~ au début de la chaîne. Par exemple:"
         +"\n 'Une ambulance avec son gyrophare n'a pas traversé le parc' donnerait:"
@@ -91,7 +91,7 @@ def traiter():
 
         session["decomposition"] = S
         session["appliquees"] = []
-        log = ""
+        log = "Génération d'une extension:"
     else :
         resultat = request.form.get("resultat", "")
         S = session.get("decomposition", [])
@@ -114,7 +114,7 @@ def traiter():
             if temp not in S:
                 S.append(temp)
 
-        log += "\n".join([f"On applique la règle {choice} : {regle} "])
+        log += "\n \n"+f"On applique la règle {choice} : {regle} "
 
         deja_appliquees.append(choice)
         session["appliquees"] = deja_appliquees
@@ -135,7 +135,7 @@ def traiter():
                                    No_rule = True)
         
         else:               # Sinon on passe à la génération des exceptions
-            log +="\n Il n'y a plus de règles applicables: Fin de la génération de l'extension"
+            log +="\n \n Il n'y a plus de règles applicables: Fin de la génération de l'extension"
             return render_template("Application.html",
                                 scenario=scenario,
                                 resultat=resultat,
@@ -147,7 +147,6 @@ def traiter():
                                 sel_map=SELECTION_METHODS)
         
     else:               # Si plusieurs règles possibles, on transmet les choix
-        log += "\n--- Nouvelle analyse après choix utilisateur ---\n"
         log +="\n".join(output)
         return render_template("Application.html",
                                 conflit=True,
