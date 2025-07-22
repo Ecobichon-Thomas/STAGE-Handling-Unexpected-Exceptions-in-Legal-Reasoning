@@ -48,48 +48,6 @@ def list_to_vars(Var_dict,Str_List):                # Cette fonction permet à p
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
-# '''TEST OK'''
-# def negation_equivalence (Vect_premises,W):
-#     temp = Vect_premises.copy()
-#     for i,p in enumerate(Vect_premises):
-#         if isinstance(p,Not):
-#             for f in W:
-#                 if isinstance(f,Iff):
-#                     left,right = f.children
-#                     if left.is_equivalent(p):
-#                         temp[i] = right
-#                         break               # HYPOTHESE : On a pas 2 équivalences qui s'appliquent à la mm proposition (ex: ~a<=>b et ~a<=>c)
-#                     elif p.children[0].is_equivalent(left):
-#                         temp[i] = right.children[0]
-#                         break
-#                     if right.is_equivalent(p):
-#                         temp[i] = left
-#                         break
-#                     elif p.children[0].is_equivalent(right):
-#                         temp[i] = left.children[0]
-#                         break
-
-#                 elif isinstance(f,Implies):
-#                     left,right = f.children
-#                     if left.is_equivalent(p):
-#                         temp[i] = right
-#                         break               # HYPOTHESE : On a pas 2 équivalences qui s'appliquent à la mm proposition (ex: ~a<=>b et ~a<=>c)
-#                     elif p.children[0].is_equivalent(left):
-#                         temp[i] = right.children[0]
-#                         break
-
-#                 elif isinstance(f,ImpliedBy):
-#                     left,right = f.children
-#                     if right.is_equivalent(p):
-#                         temp[i] = left
-#                         break
-#                     elif p.children[0].is_equivalent(right):
-#                         temp[i] = left.children[0]
-#                         break
-#     return temp
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
-
 '''TEST OK'''               # Version plus générale de negation_equivalence, au lieu de remplacer les négations on inclut toutes les prémices impliquées
 def ensemble_premices_equi (premises, W):             # En recevant un vecteur de premises, renvoie toutes les prémises "impliquées" par W
     extended = list(premises.copy())
@@ -182,7 +140,7 @@ def children_extraction(formula):
 def dictionnaire_eval_rules (Rb,rules,conclusions_only = False):                # Quand on veut sélectionner les règles applicables on s'intéresse aux prémices et aux conclusions
     # quand on veut vérifier qu'une règle est l'exception d'une autre on s'intéresse uniquement à la compatibilité des CONCLUSIONS
     Truth_Dict = {p : False for p in Rb.Var_dictionnary._variables}              # On crée un dictionnaire avec toutes les propositions utilisées dans Rb (ne contient pas de négation par construction)
-    if conclusions_only:                # Cas pour la gestion des exceptions
+    if conclusions_only == True:                # Cas pour la gestion des exceptions
         Propositions = []
     else:
         Propositions = Rb.S
@@ -321,7 +279,6 @@ class Rule_Base:
         return compatibility_matrix
     
     def dist_hamming(self, indice):                # TEST OK
-        print("hamming")
         P1 = np.atleast_2d(self.P[indice])[0]             # indice est l'indice de la règle qu'on va comparer aux autres
         C1 = self.C[indice]
         C1_full = ensemble_premices_equi (C1, self.W)
@@ -334,12 +291,10 @@ class Rule_Base:
             c_full = ensemble_premices_equi (c, self.W)
             str_formula = (' & '.join(str(p) for p in c_full)+" <=> "+c1_str)
             eq_c = str_to_formula(str_formula, self)
-            print(eq_c)
             if eq_c.is_tautology():
                 same_concl.append(True)              # On regarde les lignes avec des conclusions identiques
             else:
                 same_concl.append(False)
-        print("same_concl",same_concl)
 
         n = len(self.Var_dictionnary._variables)
         dists = np.full(len(C), n + 1)             # On fixe la distance par défault à delta, si les conclusions des 2 régles sont les mêmes on modifira cette distance
@@ -433,7 +388,6 @@ def scenario_check_web4_test(S, rulebase,deja_appliquees):
         output.append("Plusieurs règles correspondent à la situation:")
         for i in regles_possibles:
             output.append(f"- Règle {i} : {rulebase.rules_original[i]}")
-        #output.append("\n")
 
         C_matrix = rulebase.compatibility_matrix(regles_possibles)
         rows_to_remove = set(np.where(C_matrix == 1)[0])
@@ -446,6 +400,10 @@ def scenario_check_web4_test(S, rulebase,deja_appliquees):
                     output.append(f"La règle {r2_index} est prioritaire sur la règle {r1_index}, on écarte la règle {r1_index}")
 
         regles_possibles = [r for i, r in enumerate(regles_possibles) if i not in rows_to_remove]
+    elif len(regles_possibles) == 1:
+        output.append("\n")
+        output.append("Voici l'unique règle qui correspond à la situation:")
+        output.append(f"- Règle {regles_possibles[0]} : {rulebase.rules_original[regles_possibles[0]]}")
 
     return {
         "output":output,
@@ -466,8 +424,8 @@ def choix_exception(distance_method, rulebase, selection_fct_and_args,regle_choi
     selected_indices = globals()[selection_fct](getattr(rulebase, distance_method)(regle_choisie), *args)
     indices_similaires,exceptions_associees = exceptions(rulebase, selected_indices)
     return {"indices":indices_similaires,
-            "options":[rulebase.rules[i] for i in indices_similaires],
-            "exceptions associées":[[rulebase.rules[i] for i in liste] for liste in exceptions_associees]}
+            "options":[rulebase.rules_original[i] for i in indices_similaires],
+            "exceptions associées":[[rulebase.rules_original[i] for i in liste] for liste in exceptions_associees]}
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -481,7 +439,7 @@ def exceptions(Rb, selected_indices):
             if j == i:
                 continue
             if is_a_in_b(r1.premises, r2.premises):             # Si on a des prémices incluses dans r2 on étudie la compatibilité des ccl
-                if not Rb.compatible([r1,r2],conclusion_only=True):              # Si elles sont incompatibales on sélectionne la règle
+                if not Rb.compatible([r1,r2],conclusions_only=True):              # Si elles sont incompatibales on sélectionne la règle
                         filtre.append(i)
                         liste_exceptions.append(j)
         if len(liste_exceptions)>0:

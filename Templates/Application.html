@@ -114,6 +114,7 @@
 
         {% if extension %}
             <form method="post" action="/exceptions">
+                <textarea name="log" style="display:none;">{{ log }}</textarea>
                 <h2>Nous allons maintenant proposer de créer des exceptions à partir des règles sélectionnées</h2>
                 <h3>Choix de la distance utilisée pour le choix de l'exception:</h3>
                 {% for option in distances %}

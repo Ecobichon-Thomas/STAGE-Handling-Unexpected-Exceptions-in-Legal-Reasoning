@@ -23,23 +23,6 @@ class TestFcts(unittest.TestCase):
         self.assertIsInstance(vars[1],Not)
         self.assertIsInstance(vars[1].children[0],Variable)
         self.assertIsInstance(vars[0],Variable)
-    
-    def test_ensemble_premices_equi(self):
-        variables = list_to_vars(self.Var_dict,["b","~c"])
-        W_vars = list_to_vars(self.Var_dict,["a","~b","~c","d"])
-        comparaison = list_to_vars(self.Var_dict,["b","~c","~a","d"])
-
-        f1 = W_vars[0].iff(W_vars[1])
-        f2= W_vars[2].iff(W_vars[3])
-
-        W = [f1,f2]
-        temp = ensemble_premices_equi(variables,W)
-        self.assertIs(temp[0],comparaison[0])
-        self.assertIsInstance(temp[1],Not)
-        self.assertIs(temp[1].children[0],comparaison[1].children[0])
-        self.assertIsInstance(temp[2],Not)
-        self.assertIs(temp[2].children[0],comparaison[2].children[0])
-        self.assertIs(temp[3],comparaison[3])
 
     def test_is_a_in_b(self):
         v1 = list_to_vars(self.Var_dict,["~a","~d"])
@@ -87,6 +70,13 @@ class TestFcts(unittest.TestCase):
 
         self.assertEqual(formula,comparaison)
 
+    def test_children_extraction(self):
+        Rb = Rule_Base()
+        formula = str_to_formula("~ ( a & ~ b ) <=> ~ ( c | d & ( e & f ) )", Rb)
+        vars_comp = list_to_vars(Rb.Var_dictionnary,["a","b","c","d","e","f"])
+        temp = children_extraction(formula)
+        self.assertEqual(vars_comp,temp)
+
 class TestRuleBase(unittest.TestCase):
 
     def setUp(self):
@@ -108,6 +98,67 @@ class TestRuleBase(unittest.TestCase):
         included = self.Rb.inclusion([])                # On teste quelles règles peuvent s'appliquer à la situation S, on attend [0,1,3] comme résultat
         self.assertEqual([0,1,4], included)
 
+    def test_init_S(self):
+        self.Rb.add_W(["a >> ~ h",
+                      "c <=> d"])
+        self.Rb.init_S(["a","~b","c"])
+        self.assertEqual(self.Rb.S_original,"a ^ ~b ^ c")
+        self.assertEqual(self.Rb.S,list_to_vars(self.Rb.Var_dictionnary,["a","~b","c","~h","d"]))
+
+    def test_dictionnaire_eval_rules (self):
+        self.Rb.add_W(["f >> ~ h",
+                      "~ ( b & f ) & ~ ( b & d ) & ~ ( d & f )"])
+        self.Rb.add_rules([["a"],
+                           ["a","c","e"],
+                           ["a","c"],
+                           ["a","c","e","g"]],
+                          [["b"] , ["f"] , ["d"] , ["b"]])
+        self.Rb.init_S(["a","c","e"])
+        rules = [self.Rb.rules[0],self.Rb.rules[1]]
+
+        TD1,Prop1 = dictionnaire_eval_rules (self.Rb,rules,conclusions_only = False)
+        self.assertEqual(TD1, {"a": True, "b": True, "c": True, "d": False, "e": True, "f": True, "g": False, "h": False})
+        self.assertEqual(Prop1, ["a", "c", "e", "b", "f","h"])
+
+        TD2,Prop2 = dictionnaire_eval_rules (self.Rb,rules,conclusions_only = True)
+        self.assertEqual(TD2, {"a": False, "b": True, "c": False, "d": False, "e": False, "f": True, "g": False, "h": False})
+        self.assertEqual(Prop2, ["b", "f", "h"])
+
+        TD3,Prop3 = dictionnaire_eval_rules (self.Rb,[self.Rb.rules[2]],conclusions_only = False)
+        self.assertEqual(TD3, {"a": True, "b": False, "c": True, "d": True, "e": True, "f": False, "g": False, "h": False})
+        self.assertEqual(Prop3, ["a", "c", "e","d"])
+
+        TD4,Prop4 = dictionnaire_eval_rules (self.Rb,[self.Rb.rules[2]],conclusions_only = True)
+        self.assertEqual(TD4, {"a": False, "b": False, "c": False, "d": True, "e": False, "f": False, "g": False, "h": False})
+        self.assertEqual(Prop4, ["d"])
+
+    def test_compatible(self):
+        self.Rb.add_W(["f >> ~ h",
+                      "~ ( b & f ) & ~ ( b & d ) & ~ ( d & f )"])
+        self.Rb.add_rules([["a"],
+                           ["a","c","e"],
+                           ["a","c"],
+                           ["a","c","e","g"]],
+                          [["b"] , ["f"] , ["d"] , ["b"]])
+        self.Rb.init_S(["a","c","e"])
+
+        rules1 = [self.Rb.rules[0],self.Rb.rules[1]]
+        self.assertEqual(False,
+                         self.Rb.compatible(rules1,conclusions_only=False))
+
+        rules2 = [self.Rb.rules[0],self.Rb.rules[2]]
+        self.assertEqual(False,
+                         self.Rb.compatible(rules2,conclusions_only=False))
+
+        rules3 = [self.Rb.rules[0],self.Rb.rules[3]]
+        self.assertEqual(True,
+                         self.Rb.compatible(rules3,conclusions_only=False))
+        
+        rules4 = [self.Rb.rules[0],self.Rb.rules[3]]
+        self.assertEqual(True, 
+                         self.Rb.compatible(rules4,conclusions_only=False))
+
+
     def test_compatibility_matrix(self):
         self.Rb.add_W(["f >> ~ h",
                        "~ ( b & f ) & ~ ( b & d ) & ~ ( d & f )"])
@@ -128,7 +179,7 @@ class TestRuleBase(unittest.TestCase):
 
     def test_dist_hamming(self):
         self.Rb.add_W(["f >> ~ h",
-                       "~ ( b & f ) & ~ ( b & d ) & ~ ( d & f )"])
+                      "~ ( b & f ) & ~ ( b & d ) & ~ ( d & f )"])
         self.Rb.add_rules([["a"],
                            ["a","c","e"],
                            ["a","c"],
@@ -137,5 +188,49 @@ class TestRuleBase(unittest.TestCase):
         dists = self.Rb.dist_hamming(0)
         self.assertEqual(dists, [0,9,9,3])  # identiques
 
+    def test_ensemble_premices_equi(self):
+        self.Rb.add_W(["f >> ~ h", 
+                       "~ ( b & f ) & ~ ( b & d ) & ~ ( d & f )",
+                       "a <=> e",
+                       "e >> c",
+                       "~ j << c"])
+        temp = ensemble_premices_equi(list_to_vars(self.Rb.Var_dictionnary,["f","a"]),self.Rb.W)
+        comparaison = list_to_vars(self.Rb.Var_dictionnary,["f","a","~h","e","c","~j"])
+
+        self.assertIs(temp[0],comparaison[0])
+
+        self.assertIs(temp[1],comparaison[1])
+
+        self.assertIsInstance(temp[2],Not)
+        self.assertIs(temp[2].children[0],comparaison[2].children[0])
+
+        self.assertIs(temp[3],comparaison[3])
+
+        self.assertIs(temp[4],comparaison[4])
+
+        self.assertIsInstance(temp[5],Not)
+        self.assertIs(temp[5].children[0],comparaison[5].children[0])
+
+class TestSelection(unittest.TestCase):
+
+    def test_select_fct_treshold (self):
+        temp = select_fct_treshold([10,0,3,7,5,2,10,3],6)
+        for i,t in enumerate([2,4,5,7]):
+            self.assertEqual(t,temp[i])
+
+    def test_select_fct_minimal (self):
+        temp = select_fct_minimal([10,0,3,7,5,2,10,3])
+        self.assertEqual(5,temp[0])
+
+        temp = select_fct_minimal([10,0,3,7,5,4,10,3])
+        self.assertEqual(2,temp[0])
+        self.assertEqual(7,temp[1])
+
+    def test_select_fct_treshold_minimal (self):
+        temp = select_fct_treshold_minimal([10,0,3,7,5,2,10,3],6)
+        self.assertEqual(5,temp[0])
+
+        temp = select_fct_treshold_minimal([10,0,3,7,5,2,10,3],1)
+        self.assertEqual(temp,[])
 if __name__ == '__main__':
     unittest.main()

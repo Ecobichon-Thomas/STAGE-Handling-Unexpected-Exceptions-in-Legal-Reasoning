@@ -41,13 +41,11 @@ def reset():
 @app.route("/traiter", methods=["POST"])
 def traiter():
     scenario = request.form.get('scenario', "").strip()             # Scenario dans le système, déjà décomposé
-    print("scenario",scenario)
     resultat = request.form.get("resultat", "")             # Décomposition de ce scénario
     scenario1 = request.form.get("scenario1", "").strip()           # Nouveau scénario si l'utilisateur en a fourni un
     complement = request.form.get("complement", None)         #Complément au prompt si l'utilisateur n'est pas satisfait par la décomposition
 
     if scenario1 != "":               # Si l'utilisateur soumet un nouveau scénario on ré-initialise la mémoire, sinon on la conserve
-        print("reset")
         session.clear()
         scenario = scenario1
     if scenario == "":              # Cas scénario vide
@@ -58,7 +56,6 @@ def traiter():
 
     if not session.get("decomposition") or (complement != None):                # Si on a la decomposition de S en mémoire ou que la décomposition n'est pas satisfaisante
         premises = ';'.join(Rb.Var_dictionnary._variables.keys())
-        print(premises)
         prompt = ("Tu es un expert des textes juridiques et de la décomposition de situations juridiques en prémices"
         +"Décompose le scénario sous la forme d'une liste de prémices, en utilisant le caractère ; comme séparateur dans ton retour."
         +"Voici un exemple de scénario, 'Une voiture a traversé un feu rouge', le résultat attendu serait, 'véhicule;traverse_feu_rouge': \n " 
@@ -176,7 +173,8 @@ def exception():
     Rb.init_S(S)
 
     choix_ex = choix_exception(distance_method, Rb, arguments,deja_appliquees[-1])
-    print("choix_ex",choix_ex)
+
+    print("log",log)
 
     if choix_ex["options"] == []:
         return render_template(
