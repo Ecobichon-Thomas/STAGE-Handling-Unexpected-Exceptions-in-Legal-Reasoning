@@ -24,19 +24,6 @@ class TestFcts(unittest.TestCase):
         self.assertIsInstance(vars[1].children[0],Variable)
         self.assertIsInstance(vars[0],Variable)
     
-    def test_negation_equivalence(self):
-        variables = list_to_vars(self.Var_dict,["~a","~d"])
-        W_vars = list_to_vars(self.Var_dict,["a","~b","~c","d"])
-        comparaison = list_to_vars(self.Var_dict,["b","c"])
-
-        f1 = W_vars[0].iff(W_vars[1])
-        f2= W_vars[2].iff(W_vars[3])
-
-        W = [f1,f2]
-        temp = negation_equivalence(variables,W)
-        self.assertIs(temp[0],comparaison[0])
-        self.assertIs(temp[1],comparaison[1])
-    
     def test_ensemble_premices_equi(self):
         variables = list_to_vars(self.Var_dict,["b","~c"])
         W_vars = list_to_vars(self.Var_dict,["a","~b","~c","d"])
@@ -108,7 +95,7 @@ class TestRuleBase(unittest.TestCase):
     def test_add_rules_W_and_inclusion(self):
         self.Rb.add_W(["a <=> ~ b",
                        "~ c <=> d",
-                       "~ ( e & f ) & ~ ( e & ~ g ) & ~ ( ~ g & f )",
+                       "~ ( e & f ) & ~ ( e & g ) & ~ ( g & f )",
                        "~ h >> i",
                        "j << ~ k"])
         self.Rb.add_rules([["b","~c"],
@@ -121,67 +108,34 @@ class TestRuleBase(unittest.TestCase):
         included = self.Rb.inclusion([])                # On teste quelles règles peuvent s'appliquer à la situation S, on attend [0,1,3] comme résultat
         self.assertEqual([0,1,4], included)
 
-    def test_isidentical(self):
-        self.Rb.add_W(["a <=> ~ b",
-                       "~ c <=> d",
-                       "~ ( e & f ) & ~ ( e & ~ g ) & ~ ( ~ g & f )",
-                       "~ h >> i",
-                       "j << ~ k"])
-        self.Rb.add_rules([["b","~c"],
-                           ["~a","d","f"], 
-                           ["~j","g","d","f","b"], 
-                           ["a","d","f"],
-                           ["d","f"]],
-                          [["h"] , ["i"] , ["h"] , ["e"] , ["~g"]])
-        self.Rb.init_S(["b", "d"])
-        identical = self.Rb.is_identical()
-        self.assertEqual(0,identical)
-
-
     def test_compatibility_matrix(self):
-        self.Rb.add_W(["a <=> ~ b",
-                       "~ c <=> d",
-                       "~ ( e & f ) & ~ ( e & ~ g ) & ~ ( ~ g & f )",
-                       "~ h >> i",
-                       "j << ~ k"])
-        self.Rb.add_rules([["b","~c"],
-                           ["~a","d","f"], 
-                           ["~j","g","d","f","b"], 
-                           ["a","d","f"],
-                           ["d","f"]],
-                          [["h"] , ["i"] , ["h"] , ["e"] , ["~g"]])
+        self.Rb.add_W(["f >> ~ h",
+                       "~ ( b & f ) & ~ ( b & d ) & ~ ( d & f )"])
+        self.Rb.add_rules([["a"],
+                           ["a","c","e"],
+                           ["a","c"],
+                           ["a","c","e","g"]],
+                          [["b"] , ["f"] , ["d"] , ["h"]])
         self.Rb.init_S(["b", "~c", "f","k"])
-        mat = self.Rb.compatibility_matrix([0,1,2,3,4])
-        expected = [[0,1,0,0,0],
-            [0,0,1,0,0],
-            [0,0,0,0,0],
-            [0,0,0,0,0],
-            [0,1,1,1,0]]                # règle 4 incompatible avec 2,3,4 car sa ccl incompatible avec f qui est un des pré-requis des autres
+        mat = self.Rb.compatibility_matrix([0,1,2,3])
+        expected = [[0,1,1,0],
+            [0,0,0,1],
+            [0,1,0,0],
+            [0,0,0,0]]                # règle 4 incompatible avec 2,3,4 car sa ccl incompatible avec f qui est un des pré-requis des autres
 
         for row1, row2 in zip(mat, expected):
             self.assertEqual(row1.tolist(), row2)     
 
     def test_dist_hamming(self):
-        self.Rb.add_W(["a <=> ~ b",
-                       "~ c <=> d",
-                       "~ ( e & f ) & ~ ( e & ~ g ) & ~ ( ~ g & f )",
-                       "~ h >> i",
-                       "j << ~ k"])
-        self.Rb.add_rules([["b","~c"],
-                           ["~a","d","f"], 
-                           ["~j","g","d","f","b"], 
-                           ["a","d","f"],
-                           ["d","f"]],
-                          [["h"] , ["i"] , ["h"] , ["e"] , ["~g"]])
+        self.Rb.add_W(["f >> ~ h",
+                       "~ ( b & f ) & ~ ( b & d ) & ~ ( d & f )"])
+        self.Rb.add_rules([["a"],
+                           ["a","c","e"],
+                           ["a","c"],
+                           ["a","c","e","g"]],
+                          [["b"] , ["f"] , ["d"] , ["b"]])
         dists = self.Rb.dist_hamming(0)
-        self.assertEqual(dists.tolist(), [0,12,3,12,12])  # identiques
-
-'''    @patch('builtins.input', lambda *args: '0')
-    def test_scenario_check(self):
-        self.Rb.add_rules([["b", "~c"]], [["a"]])
-        self.Rb.init_S(["b", "~c"])
-        result = Scenario_check(["b", "~c"], "dist_hamming", self.Rb, [select_fct_treshold, 2])
-        self.assertEqual(result, 0)'''
+        self.assertEqual(dists, [0,9,9,3])  # identiques
 
 if __name__ == '__main__':
     unittest.main()

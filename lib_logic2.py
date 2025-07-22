@@ -48,34 +48,49 @@ def list_to_vars(Var_dict,Str_List):                # Cette fonction permet à p
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
-'''TEST OK'''
-def negation_equivalence (Vect_premises,W):
-    temp = Vect_premises.copy()
-    for i,p in enumerate(Vect_premises):
-        if isinstance(p,Not):
+# '''TEST OK'''
+# def negation_equivalence (Vect_premises,W):
+#     temp = Vect_premises.copy()
+#     for i,p in enumerate(Vect_premises):
+#         if isinstance(p,Not):
+#             for f in W:
+#                 if isinstance(f,Iff):
+#                     left,right = f.children
+#                     if left.is_equivalent(p):
+#                         temp[i] = right
+#                         break               # HYPOTHESE : On a pas 2 équivalences qui s'appliquent à la mm proposition (ex: ~a<=>b et ~a<=>c)
+#                     elif p.children[0].is_equivalent(left):
+#                         temp[i] = right.children[0]
+#                         break
+#                     if right.is_equivalent(p):
+#                         temp[i] = left
+#                         break
+#                     elif p.children[0].is_equivalent(right):
+#                         temp[i] = left.children[0]
+#                         break
 
-            for f in W:
-                if not isinstance(f,Iff):
-                    continue
+#                 elif isinstance(f,Implies):
+#                     left,right = f.children
+#                     if left.is_equivalent(p):
+#                         temp[i] = right
+#                         break               # HYPOTHESE : On a pas 2 équivalences qui s'appliquent à la mm proposition (ex: ~a<=>b et ~a<=>c)
+#                     elif p.children[0].is_equivalent(left):
+#                         temp[i] = right.children[0]
+#                         break
 
-                left,right = f.children
-                if left.is_equivalent(p):
-                    temp[i] = right
-                    break               # HYPOTHESE : On a pas 2 équivalences qui s'appliquent à la mm proposition (ex: ~a<=>b et ~a<=>c)
-                elif p.children[0].is_equivalent(left):
-                    temp[i] = right.children[0]
-                    break
-                if right.is_equivalent(p):
-                    temp[i] = left
-                    break
-                elif p.children[0].is_equivalent(right):
-                    temp[i] = left.children[0]
-                    break
-    return temp
+#                 elif isinstance(f,ImpliedBy):
+#                     left,right = f.children
+#                     if right.is_equivalent(p):
+#                         temp[i] = left
+#                         break
+#                     elif p.children[0].is_equivalent(right):
+#                         temp[i] = left.children[0]
+#                         break
+#     return temp
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
-'''TEST OK'''
+'''TEST OK'''               # Version plus générale de negation_equivalence, au lieu de remplacer les négations on inclut toutes les prémices impliquées
 def ensemble_premices_equi (premises, W):             # En recevant un vecteur de premises, renvoie toutes les prémises "impliquées" par W
     extended = list(premises.copy())
     changed = True
@@ -83,22 +98,34 @@ def ensemble_premices_equi (premises, W):             # En recevant un vecteur d
     while changed:              # On boucle tant que des premises sont ajoutées
         changed = False
         for f in W:
-            if not isinstance(f, Iff):
-                continue
-            left, right = f.children
+            if isinstance(f, Iff):
+                left, right = f.children
 
-            if left in extended and right not in extended:
-                extended.append(right)
-                changed = True
-            elif isinstance(left, Not) and left.children[0] in extended and Not(right) not in extended:
-                extended.append(Not(right))
-                changed = True
-            elif right in extended and left not in extended:
-                extended.append(left)
-                changed = True
-            elif isinstance(right, Not) and right.children[0] in extended and Not(left) not in extended:
-                extended.append(Not(left))
-                changed = True
+                if left in extended and right not in extended:
+                    extended.append(right)
+                    changed = True
+                elif isinstance(left, Not) and left.children[0] in extended and Not(right) not in extended:
+                    extended.append(Not(right))
+                    changed = True
+                elif right in extended and left not in extended:
+                    extended.append(left)
+                    changed = True
+                elif isinstance(right, Not) and right.children[0] in extended and Not(left) not in extended:
+                    extended.append(Not(left))
+                    changed = True
+
+            elif isinstance(f,Implies):
+                left,right = f.children
+                if left in extended and right not in extended:
+                    extended.append(right)
+                    changed = True
+
+            elif isinstance(f,ImpliedBy):
+                left,right = f.children
+                if right in extended and left not in extended:
+                    extended.append(left)
+                    changed = True
+
     return extended
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
@@ -152,9 +179,13 @@ def children_extraction(formula):
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
 '''TEST OK'''
-def dictionnaire_eval_rules (Rb,rules):
+def dictionnaire_eval_rules (Rb,rules,conclusions_only = False):                # Quand on veut sélectionner les règles applicables on s'intéresse aux prémices et aux conclusions
+    # quand on veut vérifier qu'une règle est l'exception d'une autre on s'intéresse uniquement à la compatibilité des CONCLUSIONS
     Truth_Dict = {p : False for p in Rb.Var_dictionnary._variables}              # On crée un dictionnaire avec toutes les propositions utilisées dans Rb (ne contient pas de négation par construction)
-    Propositions = Rb.S
+    if conclusions_only:                # Cas pour la gestion des exceptions
+        Propositions = []
+    else:
+        Propositions = Rb.S
     Propositions_names = []
     for r in rules:# Liste des propositions utilisées dans S plus les conclusions des 2 règles sélectionnées
         Propositions =  Propositions + r.conclusion
@@ -165,21 +196,10 @@ def dictionnaire_eval_rules (Rb,rules):
                 return -1,[]
         if not isinstance(s,Not):
             Propositions_names.append(s.name)
-            Truth_Dict[s.name] = True               # Si jamais la proposition n'est pas une négation, on fixe sa valeur à True
+            Truth_Dict[s.name] = True               # Si jamais la proposition n'est pas une négation, on fixe sa valeur à True (cf. HYPOTHESE)
         else:
             Propositions_names.append(s.children[0].name)
     return Truth_Dict,Propositions_names
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
-
-def check_conflict(conclusions1, conclusions2):
-    for c1 in conclusions1:
-        for c2 in conclusions2:
-            if Not(c1).is_equivalent(c2):
-                return True
-    return False
-
-#-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
 
 ###### RULEBASE #######
@@ -198,6 +218,8 @@ class Rule_Base:
         self.Var_dictionnary = VariableUnicity()                # On crée un dictionnaire de toutes les variables utilisés pour s'assurer de leur unicité
         self.W = []
         self.S = []
+        self.S_original = []                # Version originale de S (sans les ajoutes des synonyme, négations, etc...) sous forme de string
+        self.rules_original = []                # Version originale des règles (sans les ajoutes des synonyme, négations, etc...) sous forme de string
 
     def __str__(self):
         return "\n".join(str(rule) for rule in self.rules)
@@ -211,7 +233,8 @@ class Rule_Base:
             self.W.append(f)
 
     def init_S(self,list_S):                # TEST OK
-        self.S = negation_equivalence (list_to_vars(self.Var_dictionnary,list_S),self.W)
+        self.S_original = ' ^ '.join(str(s) for s in list_S)
+        self.S = ensemble_premices_equi (list_to_vars(self.Var_dictionnary,list_S),self.W)
         count = 0
         for s in self.S:
             if (not isinstance(s,Not)) and (s not in self.premises):
@@ -230,8 +253,12 @@ class Rule_Base:
         if len(list_P) != len(list_C):
             raise ValueError("Nombre de listes de prémises et de conclusions incohérent.")
         for i in range(len(list_P)):
-            P = negation_equivalence (list_to_vars(self.Var_dictionnary,list_P[i]),self.W)              # On élimine les négations dans tout les cas où il existe une équivalence pour ces négations dans W (ex: ~c<=>d)
-            C = negation_equivalence (list_to_vars(self.Var_dictionnary,list_C[i]),self.W)
+            str1 = ' ^ '.join(str(s) for s in list_P[i])                # On enregistre un string de la règle pour l'affichage (avant l'ajout des synonymes etc.. pour plus de lisibilité)
+            str2 = ' ^ '.join(str(s) for s in list_C[i])
+            self.rules_original.append(f"{str1} => {str2}")
+
+            P = ensemble_premices_equi (list_to_vars(self.Var_dictionnary,list_P[i]),self.W)              # On élimine les négations dans tout les cas où il existe une équivalence pour ces négations dans W (ex: ~c<=>d)
+            C = ensemble_premices_equi (list_to_vars(self.Var_dictionnary,list_C[i]),self.W)
 
             for c in C:
                 if (not isinstance(c,Not)) and (c not in self.conclusions):               # Mise à jour de self.conclusions
@@ -272,44 +299,29 @@ class Rule_Base:
             return [i for i in indices if is_a_in_b(self.rules[i].premises, self.S)]
         
     def compatibility_matrix(self,indices):                # TEST OK
-        print("indices",indices)
         n = len(indices)             # indices est un vecteur des indices de toutes les règles dont on veut comparer la compatibilité
+        if n>self.compteur:
+            raise ValueError("Vous avez appelé plus de règles qu'il n'en existe dans la base")
         compatibility_matrix = np.zeros((n,n))
-        print("compatibility_matrix",compatibility_matrix)
 
         for a in range(n):
             for b in range(a+1, n):
-                print("a",a)
-                print("b",b)
                 i = indices[a]
                 j = indices[b]
-                print("i",i)
-                print("j",j)
 
                 r1 = self.rules[i]
-                print("r1",r1)
                 r2 = self.rules[j]
-                print("r2",r2)
-
-                conclusions1 = r1.conclusion              # Attention, pour l'instant les conclusions sont des listes de longueur 1, il faudra changer la suite après
-                conclusions2 = r2.conclusion
 
                 if is_a_in_b(r1.premises, r2.premises):              # On teste si il y a inclusion des premises d'une règle dans l'autre
-                    if check_conflict(conclusions1, conclusions2):
+                    if not self.compatible([r1,r2],conclusions_only=True):              # Est ce que les conclusions sont compatibles?
                         compatibility_matrix[a, b] = 1
-                    else:
-                        if not self.compatible([r1,r2]):
-                            compatibility_matrix[a, b] = 1
                 elif is_a_in_b(r2.premises, r1.premises):               # Si c'est inclus dans l'autre sens on remplit le bas de la matrice,
-                    if check_conflict(conclusions1, conclusions2):
+                    if not self.compatible([r1,r2],conclusions_only=True):              # Est ce que les conclusions sont compatibles?
                         compatibility_matrix[b, a] = 1
-                    else:
-                        if not self.compatible([r1,r2]):
-                            compatibility_matrix[b, a] = 1
-        print("compatibility_matrix",compatibility_matrix)
         return compatibility_matrix
     
     def dist_hamming(self, indice):                # TEST OK
+        print("hamming")
         P1 = np.atleast_2d(self.P[indice])[0]             # indice est l'indice de la règle qu'on va comparer aux autres
         C1 = self.C[indice]
         C1_full = ensemble_premices_equi (C1, self.W)
@@ -320,13 +332,14 @@ class Rule_Base:
         same_concl = []
         for c in C:
             c_full = ensemble_premices_equi (c, self.W)
-            print(' & '.join(str(p) for p in c_full)+" <=> "+c1_str)
             str_formula = (' & '.join(str(p) for p in c_full)+" <=> "+c1_str)
             eq_c = str_to_formula(str_formula, self)
+            print(eq_c)
             if eq_c.is_tautology():
                 same_concl.append(True)              # On regarde les lignes avec des conclusions identiques
             else:
                 same_concl.append(False)
+        print("same_concl",same_concl)
 
         n = len(self.Var_dictionnary._variables)
         dists = np.full(len(C), n + 1)             # On fixe la distance par défault à delta, si les conclusions des 2 régles sont les mêmes on modifira cette distance
@@ -337,24 +350,24 @@ class Rule_Base:
                 dists[i] = distance.hamming(P1, P[i])*len(P1)               # Règles avec mm conclusion, calcul de distance de Hamming     
         return list(dists)
 
-    def is_identical(self):                 # TEST OK
-        bin_vector = [1 if prem in self.S else -1 if Not(prem) in self.S else 0 for prem in self.premises]
-        try:
-            return self.P.index(bin_vector)
-        except ValueError:
-            return -1
+    #def is_identical(self):                 # PAS A JOUR ET INUTILISE
+    #    bin_vector = [1 if prem in self.S else -1 if Not(prem) in self.S else 0 for prem in self.premises]
+    #    try:
+    #        return self.P.index(bin_vector)
+    #    except ValueError:
+    #        return -1
         
-    def compatible(self,r):
-        Truth_dict,propositions = dictionnaire_eval_rules (self,r)
+    def compatible(self,rules,conclusions_only=False):
+        Truth_dict,propositions = dictionnaire_eval_rules (self,rules,conclusions_only)
         if Truth_dict == -1:
             return False
         W_temp = (self.W).copy()
         for w in self.W:
             if isinstance(w,Iff):
-                if set(children_extraction(w)).isdisjoint(propositions):
+                if set(children_extraction(w)).isdisjoint(propositions):                    # Est ce que les variables de la formule et de la situation sont disjointes? Si oui on n'évalue pas la formule puisque elle ne s'applique pas
                     W_temp.remove(w)
         return all(w.evaluate(**Truth_dict) for w in W_temp)
-
+    
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
 
@@ -419,7 +432,7 @@ def scenario_check_web4_test(S, rulebase,deja_appliquees):
         output.append("\n")
         output.append("Plusieurs règles correspondent à la situation:")
         for i in regles_possibles:
-            output.append(f"- Règle {i} : {rulebase.rules[i]}")
+            output.append(f"- Règle {i} : {rulebase.rules_original[i]}")
         #output.append("\n")
 
         C_matrix = rulebase.compatibility_matrix(regles_possibles)
@@ -436,10 +449,9 @@ def scenario_check_web4_test(S, rulebase,deja_appliquees):
 
     return {
         "output":output,
-        "options": [rulebase.rules[i] for i in regles_possibles],
+        "options": [rulebase.rules_original[i] for i in regles_possibles],
         "indices": regles_possibles
     }
-
 
 #-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
@@ -469,13 +481,7 @@ def exceptions(Rb, selected_indices):
             if j == i:
                 continue
             if is_a_in_b(r1.premises, r2.premises):             # Si on a des prémices incluses dans r2 on étudie la compatibilité des ccl
-                conclusions1 = r1.conclusion
-                conclusions2 = r2.conclusion
-                if check_conflict(conclusions1, conclusions2):               # Si elles sont incompatibles on sélectionne la règle
-                    filtre.append(i)
-                    liste_exceptions.append(j)
-                else:
-                    if not Rb.compatible([r1,r2]):              # Si elles sont incompatibales on sélectionne la règle
+                if not Rb.compatible([r1,r2],conclusion_only=True):              # Si elles sont incompatibales on sélectionne la règle
                         filtre.append(i)
                         liste_exceptions.append(j)
         if len(liste_exceptions)>0:
@@ -489,6 +495,10 @@ def init_rule_base2():
     Rb.add_W([
         "interdit <=> ~ autorisé",
         "~ ( moins_30 & entre30_50 ) & ~ ( moins_30 & plus_50 ) & ~ ( entre30_50 & plus_50 )",
+        "gyrophare_allumé >> etat_urgence",
+        "etat_urgence >> alarme",
+        "gyrophare_allumé << alarme",
+        "interdit <=> prohibé"
     ])
     Rb.add_rules(
         [["cycliste", "traverse_parc","écouteurs"],
@@ -496,9 +506,8 @@ def init_rule_base2():
          ["véhicule", "traverse_feu_rouge"],
          ["véhicule", "etat_urgence", "traverse_feu_rouge"],
          ["véhicule", "traverse_parc"],
-         ["véhicule", "etat_urgence"],
          ["véhicule", "etat_urgence", "autorisé"]],
-        [["interdit"], ["autorisé"],["interdit"], ["autorisé"], ["interdit"], ["gyrophare_allume"],["~amende"]]
+        [["interdit"], ["autorisé"],["interdit"], ["autorisé"], ["interdit"],["~amende"]]
     )
     return Rb
 

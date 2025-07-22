@@ -104,9 +104,8 @@ def traiter():
         deja_appliquees = session.get("appliquees", [])
 
         choice = int(choice)
-        regle = Rb.rules[choice]
-        ccl = regle.conclusion              # robuste pour passage aux listes de conclusions
-        for c in ccl:
+        ccl = Rb.rules[choice].conclusion              # robuste pour passage aux listes de conclusions
+        for c in ccl:                   # On traduit en string les négations pour pouvoir les entrer dans S
             if isinstance(c,Not):
                 temp = "~"+c.children[0].name
             else:
@@ -114,17 +113,14 @@ def traiter():
             if temp not in S:
                 S.append(temp)
 
-        log += "\n \n"+f"On applique la règle {choice} : {regle} "
+        log += "\n \n"+f"On applique la règle {choice} : {Rb.rules_original[choice]} "
 
         deja_appliquees.append(choice)
         session["appliquees"] = deja_appliquees
-        #session["unique_choice"] = None             # On re-init le choix unique
 
-    analyse = scenario_check_web4_test(S, Rb,deja_appliquees)                # Règles applicable
+    analyse = scenario_check_web4_test(S, Rb,deja_appliquees)                # Règles applicables
     indices = analyse.get("indices",[])              # Indices des règles en question
-    indices = [i for i in indices if i not in session["appliquees"] ]             # On enlève celles qui ont déjà été appliquées
-    options = np.array(Rb.rules)
-    options = list(options[indices])
+    options = analyse.get("options",[])
     output = analyse.get("output","")
 
     if len(indices)==0 or choice=="-1":              # Plus aucune règle applicable, on s'arrête de générer l'extension
