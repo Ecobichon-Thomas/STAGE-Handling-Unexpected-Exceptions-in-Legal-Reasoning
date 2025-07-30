@@ -6,9 +6,58 @@ from lib_logic2 import *
 app = Flask(__name__)
 app.secret_key = "test75591729"
 
+<<<<<<< HEAD
 API_KEY = "485M73hYCA2ohQ7YykmzYLMo1zMKUjY7"
 MODEL = "mistral-medium"
 client = Mistral(api_key=API_KEY)
+=======
+#---------------------------------------------Extraction des clés-------------------------------------------------#
+
+with open("cles_API.txt") as inp:
+    keys = list(inp.read().split())
+
+#------------------------------------------------------------MISTRAL------------------------------------------------------------#
+API_KEY = keys[0]
+MODEL1 = "mistral-medium"
+client1 = Mistral(api_key=API_KEY)
+
+#------------------------------------------------------------HUGGINGFACE_OLLAMA------------------------------------------------------------#
+MODEL2 = "meta-llama/Llama-3.3-70B-Instruct"
+os.environ["HF_TOKEN"] = keys[1]
+client2 = InferenceClient(provider="hyperbolic",api_key=os.environ["HF_TOKEN"])
+
+def call_llm(prompt):
+    api_order = [session.get("selected_api", "HuggingFace"), "Mistral", "HuggingFace"]
+    tried = set()
+
+    for api_name in api_order:
+        if api_name in tried:
+            continue
+        tried.add(api_name)
+
+        try:
+            if api_name == "Mistral":
+                response = client1.chat.complete(
+                    model=MODEL1,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+            else:
+                response = client2.chat.completions.create(
+                    model=MODEL2,
+                    messages=[{"role": "user", "content": prompt}]
+                )
+
+            session["selected_api"] = api_name
+            return response.choices[0].message.content
+
+        except Exception as e:
+            if "capacity" in str(e).lower() or "rate limit" in str(e).lower():
+                continue
+            raise e
+
+    # Si aucune API ne marche :
+    raise RuntimeError("Aucune API disponible actuellement.")
+>>>>>>> 9bb6f24 (résolution d'un problème de sécurité au niveau des clés d'API, elles sont désormais dans un fichier en local non transmis sur github)
 
 #----------------------------------------------------------------------------------------------#
 
